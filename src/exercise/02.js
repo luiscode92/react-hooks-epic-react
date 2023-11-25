@@ -3,11 +3,38 @@
 
 import * as React from 'react'
 
-function Greeting({initialName = ''}) {
-  // 🐨 initialize the state to the value from localStorage
-  // 💰 window.localStorage.getItem('name') ?? initialName
-  const [name, setName] = React.useState(initialName)
 
+  
+function useLocalStorageState(
+  key, 
+  defaultValue=' ',
+  {serialize = JSON.stringify, deserialize = JSON.parse}
+  ) {
+  const [state, setState] = React.useState(() => 
+  {
+    const localStorageValue = window.localStorage.getItem(key)
+    if (localStorageValue) {
+      return deserialize(localStorageValue)
+    }
+    return typeof defaultValue === 'function' ? defaultValue() : defaultValue;
+  })
+
+  const prevKeyRef = React.useRef(key)
+
+  React.useEffect(() => {
+    if (prevKeyRef.current != key) {  
+      window.localStorage.removeItem(prevKeyRef.current)
+    }
+    prevKeyRef.current = key
+    window.localStorage.setItem(key, serialize(state))
+  },[key, state, serialize]) 
+
+  return [state, setState]
+}
+
+function Greeting({initialName = ''}) {
+  console.log("rendering")
+  const [name, setName] = useLocalStorageState('name', initialName)
   // 🐨 Here's where you'll use `React.useEffect`.
   // The callback should set the `name` in localStorage.
   // 💰 window.localStorage.setItem('name', name)
@@ -27,7 +54,14 @@ function Greeting({initialName = ''}) {
 }
 
 function App() {
-  return <Greeting />
-}
+  const [count, setCount] = React.useState(0)
+  return (
+    <>
+      <button onClick={() => setCount(prevCount => prevCount +1)}>
+        {count}
+      </button>
+      <Greeting />
+    </>
+  )}
 
 export default App
